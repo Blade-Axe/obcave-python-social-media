@@ -1,0 +1,1135 @@
+{% extends "base.html" %}
+{% block title %}{{ user.custom_name or user.username }} (@{{ user.username }}) - obcave{% endblock %}
+
+{% block head %}
+{{ super() }}
+    <link href="https://fonts.googleapis.com/css2?family={{ user.font | default('Mulish') | urlencode }}&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.css" rel="stylesheet">
+    
+    <style>
+        .navbar {
+            font-family: '{{ user.font or "Mulish" }}', sans-serif;
+            transition: color 0.3s ease;
+        }
+          
+        .navbar a {
+            transition: color 0.3s ease;
+        }
+
+        .hamburger-icon.menu-open span {
+            background-color: black !important;
+        }        
+        
+        /* Light text mode */
+        .navbar.light-text .hamburger-icon span {
+            background-color: #FFFFFF;
+        }
+        
+        /* Dark text mode */
+        .navbar.dark-text .hamburger-icon span {
+            background-color: #000000;
+        }
+        
+        /* Classes for light/dark text */
+        .navbar.light-text,
+        .navbar.light-text a,
+        .hamburger-menu.light-text {
+            color: #FFFFFF;
+        }
+        
+        .navbar.dark-text,
+        .navbar.dark-text a,
+        .hamburger-menu.dark-text {
+            color: #000000;
+        }
+        
+        /* Override dropdown text color to ensure readability */
+        .dropdown-menu a {
+            color: #000000 !important;
+        }
+
+        {% if user.column_amount == '1' %}
+            .resize-handle-horizontal {
+                display: none !important;
+            }
+            .resize-handle-vertical {
+                bottom: 5px;
+                right: 5px !important;
+            }
+        {% endif %}
+
+        body {
+            background-color: {{ user.background_colour or '#feefcd' }};
+            margin: 0;
+            padding: 0;
+        }
+        p{
+            margin: 0;
+        }
+        h1{
+            margin: 0;
+        }
+        h2{
+            margin: 0;
+        }
+        h3{
+            margin: 0;
+        }
+        .profile-container {
+            position: relative;
+            font-family: '{{ user.font or "Mulish" }}', sans-serif;
+            font-size: {{ user.font_size or 24 }}px;
+            color: {{ user.text_colour or '#000000' }};
+            text-align: {% if user.text_alignment == 'centre' %}center{% else %}{{ user.text_alignment or 'center' }}{% endif %};
+            display: grid;
+            grid-template-columns: repeat({{ user.column_amount or '2' }}, 1fr);
+            grid-auto-rows: minmax(50px, auto);
+            gap: 10px;
+            max-width: 1000px;
+            min-height: 50px;
+            margin: 0 auto;
+            padding-right: 20px;
+            padding-left: 20px;
+            padding-bottom: 20px;
+            box-sizing: border-box;
+        }
+        ::selection {
+            background-color: {{ user.text_highlight_colour or '#7fd47a' }};
+        }
+        .module {
+            padding: 15px;
+            grid-row: span 1;
+            position: relative;
+            background-color: {{ user.secondary_colour or '#fec49a' }};
+            border-radius: 10px;
+            min-height: 50px;
+            border: 5px solid {{ user.tertiary_colour or '#fda372' }};
+            touch-action: none;
+            transition: all 0.3s ease;
+            box-sizing: border-box;
+            overflow: hidden;
+            width: 100%;
+            height: 100%;
+        }
+        
+        .module.dragging {
+            opacity: 0.8;
+            z-index: 1000;
+            cursor: grabbing;
+            user-select: none;
+        }
+
+        .module.resizing {
+            z-index: 1000;
+            transition: none;
+            user-select: none;
+        }
+
+        .drag-handle {
+            position: absolute;
+            top: 0px;
+            right: 0px;
+            width: 24px;
+            height: 24px;
+            background-color: {{ user.text_highlight_colour or '#7fd47a' }};
+            color: {{ user.text_colour or '#000000' }};
+            cursor: grab;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            border-radius: 4px;
+            z-index: 10;
+            user-select: none;
+        }
+
+        .resize-handle-horizontal,
+        .resize-handle-vertical {
+            position: absolute;
+            width: 24px;
+            height: 24px;
+            background-color: {{ user.text_highlight_colour or '#7fd47a' }};
+            border-radius: 4px;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            z-index: 10;
+            user-select: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: {{ user.text_colour or '#000000' }};
+        }
+
+        .resize-handle-horizontal {
+            bottom: 0px;
+            right: 0px;
+            cursor: e-resize;
+        }
+
+        .resize-handle-horizontal::before {
+            content: "↔";
+            font-size: 14px;
+        }
+
+        .resize-handle-vertical {
+            bottom: 0px;
+            right: 30px;
+            cursor: s-resize;
+        }
+
+        .resize-handle-vertical::before {
+            content: "↕";
+            font-size: 14px;
+        }
+
+        .module:hover .resize-handle-horizontal,
+        .module:hover .resize-handle-vertical,
+        .module:hover .drag-handle {
+            opacity: 1;
+        }
+
+        
+        {% if user.column_amount == '1' %}
+        @media (max-width: 850px){
+            .profile-container{
+                grid-template-columns: repeat(1, 1fr) !important;
+            }
+            .resize-handle-horizontal,
+            .resize-handle-vertical {
+                display: none !important;
+            }
+            .module {
+                grid-column: 1 / -1 !important;
+            }
+        }
+        {% endif %}
+
+        @media (max-width: 768px) {
+            .profile-container {
+                grid-template-columns: repeat(1, 1fr) !important;
+                gap: 10px;
+                
+            }
+            .module {
+                /* Force single column layout */
+                grid-column: 1 / -1 !important;
+                /* Reset any custom positioning */
+                grid-row: auto !important;
+                min-height: 50px;
+            }
+            .resize-handle-horizontal,
+            .resize-handle-vertical {
+                display: none !important;
+            }
+        }
+
+        @media (max-width: 630px) {
+            a.nav-title-home.bordered {
+                display: inline-block;
+                text-shadow: -1px -1px 0 #000, 1px -1px 0 #000,-1px 1px 0 #000, 1px 1px 0 #000; 
+            }
+        }         
+
+        @media (max-width: 480px) {
+            .profile-container {
+                
+                gap: 10px;
+            }
+            .module {
+                
+                min-height: 50px;
+            }
+            .resize-handle-horizontal,
+            .resize-handle-vertical {
+                display: none !important;
+            }
+        }
+
+        /* Content-specific styles */
+        .profile-header {
+            align-items: {% if user.text_alignment == 'centre' %}center{% else %}{{ user.text_alignment or 'center' }}{% endif %};
+            gap: 0px;
+        }
+
+        .module-content{
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .bio-section {
+            word-wrap: break-word;
+        }
+
+        .links-section {
+            display: flex;
+            flex-direction: column;
+            gap: 0px;
+        }
+
+        .links-section a {
+            word-break: break-all;
+        }
+        .copy-link-button{
+            display: inline-flex;  /* Makes the clickable area match text */
+            align-items: center;
+            cursor: pointer;
+            text-align: {% if user.text_alignment == 'centre' %}center{% else %}{{ user.text_alignment or 'center' }}{% endif %};
+            color: {{ user.link_colour or '#be4737' }};
+        }
+        .copy-link-button:hover{
+            color: {{ user.link_hover_colour or '#388ae8' }}
+        }
+        .links-block{
+            text-align: {% if user.text_alignment == 'centre' %}center{% else %}{{ user.text_alignment or 'center' }}{% endif %};
+        }
+        .links-block a{
+            text-align: {% if user.text_alignment == 'centre' %}center{% else %}{{ user.text_alignment or 'center' }}{% endif %};
+            color: {{ user.link_colour or '#be4737' }};
+        }
+        .links-block a:hover{
+            color: {{ user.link_hover_colour or '#388ae8' }};
+        }
+
+        .badges-container {
+            display: flex;
+            margin: 0;
+            flex-wrap: wrap;
+            align-content: stretch;
+            justify-content: {% if user.text_alignment == 'centre' %}center{% else %}{{ user.text_alignment or 'center' }}{% endif %};
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .badge {
+            position: relative;
+            transition: transform 0.2s ease;
+        }
+        
+        .badge:hover {
+            transform: scale(1.1);
+        }
+        
+        .badge-icon {
+            border-radius: 15px;
+            border: 2px solid {{ user.tertiary_colour or '#fda372' }};
+            background-color: {{ user.secondary_colour or '#fec49a' }};
+            padding: 3px;
+        }
+        
+        .badge-dynamic {
+            content: '';
+            position: relative;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(
+                135deg,
+                rgba(255, 0, 0, 0.2),
+                rgba(255, 165, 0, 0.2),
+                rgba(255, 255, 0, 0.2),
+                rgba(0, 255, 0, 0.2),
+                rgba(0, 0, 255, 0.2),
+                rgba(238, 130, 238, 0.2),
+                rgba(255, 0, 0, 0.2)  /* Repeated first color for smooth transition */
+            );
+            background-size: 200% 200%;
+            animation: prismShift 3s linear infinite;
+        }
+        
+        @keyframes prismShift {
+            0% {
+                background-position: 0% 50%;
+            }
+            100% {
+                background-position: 200% 50%;
+            }
+        }
+        .badge-modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            backdrop-filter: blur(5px);
+            align-items: center;
+            justify-content: center;
+        }
+    
+        .badge-modal-overlay.active {
+            display: flex;
+        }
+    
+        .badge-modal {
+            text-align: {% if user.text_alignment == 'centre' %}center{% else %}{{ user.text_alignment or 'center' }}{% endif %};
+            border-radius: 15px;
+            padding: 1.5rem;
+            position: relative;
+            width: 90%;
+            max-width: 400px;
+            transform: scale(0.95);
+            opacity: 0;
+            transform-style: preserve-3d;
+            perspective: 1000px;
+            transition: transform 0.2s ease, opacity 0.2s ease;
+        }
+    
+        .badge-modal.active {
+            transform: scale(1);
+            opacity: 1;
+        }
+    
+        .badge-modal-close {
+            position: absolute;
+            top: -15px;
+            right: -0px;
+            background: none;
+            border: none;
+            font-size: 30px;
+            font-weight: 900;
+            cursor: pointer;
+            outline: white;
+            color: {{ user.secondary_colour or '#fec49a' }};
+            -webkit-text-stroke: 1px {{ user.tertiary_colour or '#fda372' }};
+            padding: 5px;
+            line-height: 1;
+        }
+    
+        /* Badge card styles in modal */
+        .badge-card {
+            font-family: '{{ user.font or "Mulish" }}', sans-serif;
+            box-shadow: 0 20px 30px rgba(0,0,0,0.4);
+            border-radius: 15px;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            color: white;
+            position: left;
+            transform-style: preserve-3d;
+            transition: transform 0.1s ease;
+        }
+    
+        .badge-card.rank-1 {
+            color: black;
+            background: linear-gradient(135deg, #FFD700, #B8860B); }
+        .badge-card.rank-2 { 
+            color: black;
+            background: linear-gradient(135deg, #C0C0C0, #808080); }
+        .badge-card.rank-3 { background: linear-gradient(135deg, #CD7F32, #8B4513); }
+        .badge-card.rank-4 { background: linear-gradient(135deg, #4B0082, #2E0854); }
+        .badge-card.rank-5 { background: linear-gradient(135deg, #000080, #000045); }
+        .badge-card.rank-default { background: linear-gradient(135deg, #2F4F4F, #1C2F2F); }
+    
+        .badge-card .badge-icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto;
+            display: block;
+        }
+    
+        .badge-card.dynamic::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 15px;
+            background: linear-gradient(
+                125deg,
+                rgba(255,255,255,0) 0%,
+                rgba(255,255,255,0.2) 10%,
+                rgba(255,255,255,0.4) 20%,
+                rgba(255,255,255,0.2) 30%,
+                rgba(255,255,255,0) 40%
+            );
+            animation: prism-shine 3s infinite linear;
+            pointer-events: none;
+        }
+    
+        .badge-properties {
+            margin-top: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            font-size: 0.9em;
+        }
+    
+        @keyframes prism-shine {
+            0% { background-position: -100% 0; }
+            100% { background-position: 200% 0; }
+        }
+        .dashboard-link-button {
+            display: inline-block;
+            margin-top: 1rem;
+            padding: 0.5rem 1rem;
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.4);
+            border-radius: 8px;
+            color: inherit;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            text-align: center;
+        }
+        
+        .dashboard-link-button:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+        .link-item {
+            text-align: {% if user.text_alignment == 'centre' %}center{% else %}{{ user.text_alignment or 'center' }}{% endif %};
+            display: flex;
+            align-items: center;
+            justify-content: {% if user.text_alignment == 'centre' or user.text_alignment == 'center' %}center{% elif user.text_alignment == 'right' %}flex-end{% else %}flex-start{% endif %};
+            gap: 8px;
+            margin-bottom: 4px;
+        }
+        
+        .links-section {
+            display: flex;
+            flex-direction: column;
+            gap: 0px;
+            text-align: {% if user.text_alignment == 'centre' %}center{% else %}{{ user.text_alignment or 'center' }}{% endif %};
+        }
+        
+        .links-block {
+            text-align: {% if user.text_alignment == 'centre' %}center{% else %}{{ user.text_alignment or 'center' }}{% endif %};
+            width: 100%;
+        }
+        
+        .links-block a {
+            text-align: {% if user.text_alignment == 'centre' %}center{% else %}{{ user.text_alignment or 'center' }}{% endif %};
+            color: {{ user.link_colour or '#be4737' }};
+            text-decoration: none;
+        }
+        
+        .favicon {
+            width: {{ user.font_size or 24 }}px;
+            height: {{ user.font_size or 24 }}px;
+            object-fit: contain;
+        }
+        @media (min-width: 1025px) {
+            .nav-titles a.active {
+                box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
+                background: {{ user.secondary_colour or '#fec49a' }};
+                border-radius: 10px;
+            }
+            
+            /* Optional: Add underline or other styling */
+            .nav-titles a.active:hover {
+                background: {{ user.secondary_colour or '#fec49a' }};
+            }
+            .nav-title-members:hover,
+            .nav-title-about:hover,
+            .nav-title-achievements:hover,
+            .login-link:hover,
+            .nav-title-account:hover {
+                box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
+                border-radius: 10px;
+                background-color: {{ user.secondary_colour or '#fec49a' }};
+                transition: background-color 0.5s;
+            }
+        }
+        .no-badges {
+            text-align: center;
+            width: 100%;
+            margin: 0;
+            padding: 10px 0;
+        }
+        .bio-mention {
+            color: {{ user.link_colour or '#be4737' }};
+            text-decoration: none;
+        }
+        
+        .bio-mention:hover {
+            color: {{ user.link_hover_colour or '#388ae8' }};
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+<div class="profile-container" id="sortable-container">
+    {% for module_entry in user.module_order.split(',') if user.module_order %}
+        {% set module_data = module_entry.split(':') %}
+        {% set module = module_data[0] %}
+        {% set position_data = module_data[1].split('x') if module_data|length > 1 else ['1', '1', '1', '1'] %}
+        {% set col_start = position_data[0] %}
+        {% set row_start = position_data[1] %}
+        {% set col_span = position_data[2] if position_data|length > 2 else '1' %}
+        {% set row_span = position_data[3] if position_data|length > 3 else '1' %}
+        <div class="module{% if is_owner %} draggable{% endif %}" 
+            data-module-id="{{ module }}" 
+            style="grid-column: {{ col_start }} / span {{ col_span }}; grid-row: {{ row_start }} / span {{ row_span }};">
+            {% if is_owner %}
+                <div class="resize-handle-horizontal"></div>
+                <div class="resize-handle-vertical"></div>
+                <div class="drag-handle">⋮</div>
+            {% endif %}
+        
+        <div class="module-content">
+            {% if module == 'avatar' %}
+                <div class="profile-header">
+                    <img class="profile-avatar" src="{{ user.avatar_url }}" alt="Avatar" style="width: 80px; border-radius: 50%;">
+                    <p>{{ user.custom_name or user.username }}</p>
+                    <div class="username-handle">
+                        <p class="copy-link-button" onclick="copyProfileLink()">@{{ user.username }}</p>
+                    </div>
+                </div>
+            
+            {% elif module == 'bio' and user.bio %}
+                <div class="bio-section">
+                    <p>{{ user.bio | safe }}</p>
+                </div>
+            
+            {% elif module == 'links' and user.links %}
+                <div class="links-section">
+                    <h3>Links</h3>
+
+                    <div class="links-block">
+                        {% for link in user.links.split(',') %}
+                            {% set url = link.strip() %}
+                            <div class="link-item">
+                                {% if user.is_favicon_enabled %}
+                                <img src="https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url={{ url }}&size={{ user.font_size or 24 }}" 
+                                     class="favicon" 
+                                     onerror="this.style.display='none'">
+                                {% endif %}
+                                <a href="{{ url }}" target="_blank">
+                                    {{ url }}
+                                </a>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+            {% elif module == 'badges' %}
+                <div class="badges-module">
+                    <h3 class="header-profile-h3">Badges</h3>
+                    <div class="badges-container" id="badges-sortable">
+                        {% set ns = namespace(has_badges=false) %}
+                        {% if user.badges %}
+                            {% for badge in user.badges %}
+                                {% if badge and badge.icon_path %}
+                                    {% set ns.has_badges = true %}
+                                    <div class="badge" data-badge-id="{{ badge.id }}">
+                                        <img src="{{ url_for('static', filename=badge.icon_path) }}" 
+                                             alt="{{ badge.name }}"
+                                             class="badge-icon {% if badge.is_dynamic %}badge-dynamic{% endif %}"
+                                             title="{{ badge.description }}"
+                                             onerror="this.parentElement.remove()">
+                                    </div>
+                                {% endif %}
+                            {% endfor %}
+                        {% endif %}
+                        {% if not ns.has_badges %}
+                            <p class="no-badges">No badges earned yet</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+            {% elif module == 'member_since' %}
+                <p class="member-since">Member since: {{ user.created_at.strftime('%B %d, %Y') }}</p>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+
+</div>
+<div class="badge-modal-overlay" id="badgeModal">
+    <div class="badge-modal">
+        <button class="badge-modal-close">&times;</button>
+        <div class="badge-card">
+            <img class="badge-icon" src="" alt="Badge">
+            <h3 class="badge-name"></h3>
+            <p class="badge-description"></p>
+            <div class="badge-properties">
+                <span class="badge-permission"></span>
+                <span class="badge-rank"></span>
+                <span class="badge-type"></span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    window.isOwner = {{ 'true' if is_owner else 'false' }};
+</script>
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const navbar = document.querySelector('.navbar');
+        const hamburger = document.querySelector('.hamburger-icon');
+        const navTitle = document.querySelector('.nav-title-home');
+        let isMenuOpen = false;
+        const moduleElement = document.querySelector('.module');
+        let secondaryColor = '#fec49a';
+
+        if (moduleElement) {
+            secondaryColor = getComputedStyle(moduleElement).backgroundColor;
+        }
+
+        function getLuminance(color) {
+            const rgb = color.match(/\d+/g).map(Number);
+            const [r, g, b] = rgb.map(val => {
+                val = val / 255;
+                return val <= 0.03928 ? val / 12.92 : Math.pow((val + 0.055) / 1.055, 2.4);
+            });
+            return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+        }
+        
+        const secondaryLuminance = getLuminance(secondaryColor);
+        const secondaryTextColor = secondaryLuminance > 0.5 ? '#000000' : '#FFFFFF';
+        
+        // Update active nav elements' text color
+        document.querySelectorAll('.nav-titles a.active').forEach(activeElement => {
+            activeElement.style.color = secondaryTextColor;
+        });
+        
+        // Apply hover effects to nav elements
+        const navElements = document.querySelectorAll('.nav-title-members, .nav-title-about, .nav-title-achievements, .login-link, .nav-title-account');
+        navElements.forEach(navElement => {
+            navElement.addEventListener('mouseover', function() {
+                this.style.color = secondaryTextColor;
+            });
+            navElement.addEventListener('mouseout', function() {
+                if (this.classList.contains('active')) {
+                    this.style.color = secondaryTextColor;
+                } else {
+                    this.style.removeProperty('color');
+                }
+            });
+        });
+    
+        // Function to update the text colour based on background luminance
+        function updateNavbarTextColor() {
+            const backgroundColor = getComputedStyle(document.body).backgroundColor;
+            const rgb = backgroundColor.match(/\d+/g).map(Number);
+            const [r, g, b] = rgb.map(val => {
+                val = val / 255;
+                return val <= 0.03928 ? val / 12.92 : Math.pow((val + 0.055) / 1.055, 2.4);
+            });
+            const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    
+            if (luminance > 0.5) {
+                navbar.classList.add('dark-text');
+                navbar.classList.remove('light-text');
+            } else {
+                navbar.classList.add('light-text');
+                navbar.classList.remove('dark-text');
+            }
+        }
+    
+        // Toggle menu and apply border if conditions are met
+        hamburger.addEventListener("click", function () {
+            isMenuOpen = !isMenuOpen;
+            if (isMenuOpen) {
+                hamburger.classList.add("menu-open"); // Apply a class when menu is open
+                
+                // Check screen size and if navbar has light-text
+                if (window.innerWidth < 630 && navbar.classList.contains('light-text')) {
+                    navTitle.classList.add("bordered");
+                }
+            } else {
+                hamburger.classList.remove("menu-open");
+                navTitle.classList.remove("bordered"); // Remove border when menu closes
+            }
+        });
+    
+        // Initial check
+        updateNavbarTextColor();
+    });                 
+</script>
+
+{% if is_owner %}
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const container = document.getElementById('sortable-container');
+        const columnCount = parseInt('{{ user.column_amount }}') || 1;
+        const gridGap = 10;
+        const rowHeight = 50 + gridGap;
+    
+        // Initialize module positions from saved order
+        function initializeModulePositions() {
+            const modules = Array.from(container.children);
+            modules.forEach(module => {
+                const moduleEntry = module.dataset.moduleId;
+                if (!moduleEntry) return;
+    
+                // Get the position data from the module's style
+                const style = window.getComputedStyle(module);
+                const currentColStart = parseInt(style.gridColumnStart) || 1;
+                const currentRowStart = parseInt(style.gridRowStart) || 1;
+                const colSpan = parseInt(style.gridColumnEnd.split('span ')[1]) || 1;
+                const rowSpan = parseInt(style.gridRowEnd.split('span ')[1]) || 1;
+    
+                // Ensure the module stays within bounds
+                const adjustedColSpan = Math.min(colSpan, columnCount);
+                const adjustedColStart = Math.min(currentColStart, columnCount - adjustedColSpan + 1);
+    
+                // Apply the validated position
+                module.style.gridColumn = `${adjustedColStart} / span ${adjustedColSpan}`;
+                module.style.gridRow = `${currentRowStart} / span ${rowSpan}`;
+            });
+        }
+
+        function getModulePosition(module) {
+            const style = window.getComputedStyle(module);
+            const gridColumn = style.gridColumn;
+            const gridRow = style.gridRow;
+        
+            // Parse gridColumn to get start and span
+            const colParts = gridColumn.split(' / ');
+            const colStart = parseInt(colParts[0]);
+            const colSpan = colParts[1].startsWith('span ') ? parseInt(colParts[1].substring(5)) : 1;
+        
+            // Parse gridRow to get start and span
+            const rowParts = gridRow.split(' / ');
+            const rowStart = parseInt(rowParts[0]);
+            const rowSpan = rowParts[1].startsWith('span ') ? parseInt(rowParts[1].substring(5)) : 1;
+        
+            return { colStart, colSpan, rowStart, rowSpan };
+        }
+    
+        // Initialize Sortable
+        const sortable = Sortable.create(container, {
+            animation: 50,
+            handle: '.drag-handle',
+            ghostClass: 'dragging',
+            onEnd: function(evt) {
+                const item = evt.item;
+                snapToGrid(item);
+                reorganizeModules();
+                saveOrder();
+            }
+        });
+    
+        function snapToGrid(module) {
+            const style = window.getComputedStyle(module);
+            const colSpan = parseInt(style.gridColumnEnd.split('span ')[1]) || 1;
+            const rowSpan = parseInt(style.gridRowEnd.split('span ')[1]) || 1;
+            
+            // Ensure the module stays within bounds
+            const adjustedColSpan = Math.min(colSpan, columnCount);
+            module.style.gridColumn = `auto / span ${adjustedColSpan}`;
+            module.style.gridRow = `auto / span ${rowSpan}`;
+        }
+    
+        function reorganizeModules() {
+            const modules = Array.from(container.children);
+            const occupied = new Map();
+            let maxRow = 1;
+    
+            modules.forEach((module) => {
+                const style = window.getComputedStyle(module);
+                const colSpan = Math.min(parseInt(style.gridColumnEnd.split('span ')[1]) || 1, columnCount);
+                const rowSpan = parseInt(style.gridRowEnd.split('span ')[1]) || 1;
+    
+                // Find next available position
+                let position = findNextAvailablePosition(colSpan, occupied);
+                
+                // Place module and mark positions as occupied
+                module.style.gridColumn = `${position.col} / span ${colSpan}`;
+                module.style.gridRow = `${position.row} / span ${rowSpan}`;
+                
+                // Update maxRow if necessary
+                maxRow = Math.max(maxRow, position.row + rowSpan);
+                
+                // Mark positions as occupied
+                for (let r = position.row; r < position.row + rowSpan; r++) {
+                    for (let c = position.col; c < position.col + colSpan; c++) {
+                        occupied.set(`${r},${c}`, module);
+                    }
+                }
+            });
+    
+            // Update container height to fit all modules
+            //container.style.minHeight = `${maxRow * rowHeight}px`;
+        }
+    
+        function findNextAvailablePosition(colSpan, occupied) {
+            let row = 1;
+            let col = 1;
+            
+            while (true) {
+                let canPlace = true;
+                
+                // Check if this position works
+                for (let r = row; r < row + 1; r++) {
+                    for (let c = col; c < col + colSpan; c++) {
+                        if (occupied.has(`${r},${c}`) || c > columnCount) {
+                            canPlace = false;
+                            break;
+                        }
+                    }
+                    if (!canPlace) break;
+                }
+                
+                if (canPlace) {
+                    return { row, col };
+                }
+                
+                // Try next position
+                col++;
+                if (col > columnCount - colSpan + 1) {
+                    col = 1;
+                    row++;
+                }
+            }
+        }
+    
+        // Handle module resizing
+        let resizeState = {
+            isResizing: false,
+            type: null,
+            module: null,
+            startX: 0,
+            startY: 0,
+            startColSpan: 0,
+            startRowSpan: 0
+        };
+    
+        function initializeResize(e, module, type) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const style = window.getComputedStyle(module);
+            const colSpan = parseInt(style.gridColumnEnd.split('span ')[1]) || 1;
+            const rowSpan = parseInt(style.gridRowEnd.split('span ')[1]) || 1;
+            
+            resizeState.isResizing = true;
+            resizeState.type = type;
+            resizeState.module = module;
+            resizeState.startX = e.clientX;
+            resizeState.startY = e.clientY;
+            resizeState.startColSpan = colSpan;
+            resizeState.startRowSpan = rowSpan;
+            
+            module.classList.add('resizing');
+            
+            document.addEventListener('mousemove', handleResize);
+            document.addEventListener('mouseup', stopResize);
+        }
+    
+        function handleResize(e) {
+            if (!resizeState.isResizing) return;
+    
+            const module = resizeState.module;
+            const containerRect = container.getBoundingClientRect();
+            const columnWidth = (containerRect.width + gridGap) / columnCount;
+            
+            if (resizeState.type === 'horizontal' && columnCount > 1) {
+                const deltaX = e.clientX - resizeState.startX;
+                const newColSpan = Math.max(1, Math.min(
+                    columnCount,
+                    Math.round((deltaX / columnWidth) + resizeState.startColSpan)
+                ));
+                module.style.gridColumn = `auto / span ${newColSpan}`;
+            } else if (resizeState.type === 'vertical') {
+                const deltaY = e.clientY - resizeState.startY;
+                //const newRowSpan = resizeState.startRowSpan + Math.round(deltaY / 50);
+                const newRowSpan = Math.max(1, Math.round((deltaY / rowHeight) + resizeState.startRowSpan));
+                module.style.gridRow = `auto / span ${newRowSpan}`;
+            }
+            reorganizeModules();
+        }
+    
+        function stopResize() {
+            if (!resizeState.isResizing) return;
+            
+            resizeState.module.classList.remove('resizing');
+            resizeState.isResizing = false;
+            reorganizeModules();
+            saveOrder();
+            
+            document.removeEventListener('mousemove', handleResize);
+            document.removeEventListener('mouseup', stopResize);
+        }
+    
+        async function saveOrder() {
+            const modules = Array.from(container.children);
+            const moduleOrder = modules.map(module => {
+                const moduleId = module.dataset.moduleId;
+                const style = window.getComputedStyle(module);
+                const colStart = parseInt(style.gridColumnStart);
+                const rowStart = parseInt(style.gridRowStart);
+                const colSpan = parseInt(style.gridColumnEnd.split('span ')[1]) || 1;
+                const rowSpan = parseInt(style.gridRowEnd.split('span ')[1]) || 1;
+                return `${moduleId}:${colStart}x${rowStart}x${colSpan}x${rowSpan}`;
+            });
+    
+            const orderString = moduleOrder.join(',');
+    
+            try {
+                const response = await fetch('/save-module-order', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ order: orderString })
+                });
+                if (!response.ok) throw new Error('Failed to save order');
+            } catch (error) {
+                console.error('Error saving changes:', error);
+            }
+        }
+    
+        // Initialize resize handlers
+        document.querySelectorAll('.module').forEach(module => {
+            const resizeHandleH = module.querySelector('.resize-handle-horizontal');
+            const resizeHandleV = module.querySelector('.resize-handle-vertical');
+    
+            if (resizeHandleH && columnCount > 1) {
+                resizeHandleH.addEventListener('mousedown', (e) => {
+                    initializeResize(e, module, 'horizontal');
+                });
+                resizeHandleH.style.display = 'flex';
+            }
+    
+            if (resizeHandleV) {
+                resizeHandleV.addEventListener('mousedown', (e) => {
+                    initializeResize(e, module, 'vertical');
+                });
+                resizeHandleV.style.display = 'flex';
+            }
+        });
+    
+        // Initial setup
+        initializeModulePositions();
+        reorganizeModules();
+    });
+</script>
+{% endif %}
+{% if is_owner %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const sortable = Sortable.create(document.getElementById('badges-sortable'), {
+        animation: 150,
+        onEnd: function(evt) {
+            const badgeIds = Array.from(evt.from.children).map(el => {
+                return el.getAttribute('data-badge-id');
+            });
+            fetch('/reorder-badges', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ order: badgeIds })
+            }).then(response => {
+                if (!response.ok) alert('Failed to save order');
+            });
+        }
+    });
+});
+</script>
+{% endif %}
+<script>
+    function copyProfileLink() {
+        const profileLink = "{{ public_profile_link }}";
+        navigator.clipboard.writeText(profileLink)
+            .then(() => {
+                alert("Profile link copied to clipboard!");
+            })
+            .catch(() => {
+                alert("Failed to copy profile link.");
+            });
+    }
+</script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const modal = document.getElementById('badgeModal');
+        const modalContent = modal.querySelector('.badge-modal');
+        const modalCard = modal.querySelector('.badge-card');
+        
+        // Add tilt effect
+        modalCard.addEventListener('mousemove', handleTilt);
+        modalCard.addEventListener('mouseleave', resetTilt);
+        
+        function handleTilt(e) {
+            const rect = modalCard.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            const centerX = rect.width / 2;
+            const centerY = rect.height / 2;
+            
+            const tiltX = (y - centerY) / 10;
+            const tiltY = (centerX - x) / 10;
+            
+            modalCard.style.transform = `perspective(1000px) rotateX(${tiltX}deg) rotateY(${tiltY}deg) scale3d(1.02, 1.02, 1.02)`;
+        }
+        
+        function resetTilt() {
+            modalCard.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)';
+        }
+        
+        // Modify your existing badge click handler
+        document.querySelectorAll('.badges-container .badge').forEach(badge => {
+            badge.addEventListener('click', async function() {
+                const badgeId = this.getAttribute('data-badge-id');
+                try {
+                    const response = await fetch(`/api/badge/${badgeId}`);
+                    if (!response.ok) throw new Error('Failed to fetch badge data');
+                    const badgeData = await response.json();
+                    
+                    // Update modal content
+                    modalCard.className = 'badge-card' + 
+                        (badgeData.is_dynamic ? ' dynamic' : '') + 
+                        ` rank-${badgeData.order_rank <= 5 ? badgeData.order_rank : 'default'}`;
+                    
+                    modal.querySelector('.badge-icon').src = `/static/${badgeData.icon_path}`;
+                    modal.querySelector('.badge-name').textContent = badgeData.name;
+                    modal.querySelector('.badge-description').textContent = badgeData.description;
+                    modal.querySelector('.badge-permission').textContent = `Permission: ${badgeData.permission_level}`;
+                    modal.querySelector('.badge-rank').textContent = `Order Priority: ${badgeData.order_rank}`;
+                    modal.querySelector('.badge-type').textContent = `Type: ${badgeData.is_dynamic ? 'Dynamic' : 'Static'}`;
+                    
+                    // Add dashboard link button if user is owner
+                    const badgeProperties = modal.querySelector('.badge-properties');
+                    const existingButton = badgeProperties.querySelector('.dashboard-link-button');
+                    if (existingButton) {
+                        existingButton.remove();
+                    }
+                    
+                    if (window.isOwner) { // You'll need to set this variable based on is_owner
+                        const dashboardLink = document.createElement('a');
+                        dashboardLink.href = '/dashboard/badges';
+                        dashboardLink.className = 'dashboard-link-button';
+                        dashboardLink.textContent = 'View Badges';
+                        badgeProperties.appendChild(dashboardLink);
+                    }
+                    
+                    // Show modal with animation
+                    modal.classList.add('active');
+                    setTimeout(() => modalContent.classList.add('active'), 10);
+                    
+                } catch (error) {
+                    console.error('Error fetching badge data:', error);
+                }
+            });
+        });
+    });
+    document.addEventListener('DOMContentLoaded', function() {
+        const modal = document.getElementById('badgeModal');
+        const modalContent = modal.querySelector('.badge-modal');
+        const closeModalButton = modal.querySelector('.badge-modal-close');
+    
+        // Close modal when clicking outside the modal content
+        modal.addEventListener('click', function(event) {
+            if (event.target === modal) {
+                closeModal();
+            }
+        });
+    
+        // Close modal when clicking the close button
+        closeModalButton.addEventListener('click', function() {
+            closeModal();
+        });
+    
+        function closeModal() {
+            modalContent.classList.remove('active');
+            setTimeout(() => modal.classList.remove('active'), 200);
+        }
+    });
+</script>
+{% endblock %}

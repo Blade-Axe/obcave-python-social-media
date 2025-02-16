@@ -1,0 +1,550 @@
+{% extends "base.html" %}
+{% block title %}Edit Profile{% endblock %}
+{% block head %}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/spectrum/1.8.1/spectrum.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/spectrum/1.8.1/spectrum.min.js"></script>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@simonwep/pickr/dist/themes/nano.min.css"/>
+    <script src="https://cdn.jsdelivr.net/npm/@simonwep/pickr/dist/pickr.min.js"></script>
+    <script defer>
+        // Store initial form values when page loads
+        let initialFormValues = {};
+
+        // Function to get all form values
+        function getFormValues() {
+            const form = document.querySelector('form');
+            const values = {};
+            
+            // Handle checkboxes specifically
+            form.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+                values[checkbox.name] = checkbox.checked;
+            });
+            
+            // Handle all other form elements
+            const formData = new FormData(form);
+            for (const [key, value] of formData.entries()) {
+                if (!values.hasOwnProperty(key)) { // Don't override checkbox values
+                    values[key] = value;
+                }
+            }
+            
+            return values;
+        }
+
+        // Function to compare current values with initial values
+        function hasFormChanged() {
+            const currentValues = getFormValues();
+            
+            for (const key in currentValues) {
+                // Skip comparison if the initial value doesn't exist
+                if (!initialFormValues.hasOwnProperty(key)) continue;
+                
+                // Compare current value with initial value
+                if (currentValues[key] !== initialFormValues[key]) {
+                    return true;
+                }
+            }
+            
+            return false;
+        }
+
+        // Function to update save button state
+        function updateSaveButton() {
+            const saveButton = document.querySelector('.save-button');
+            const hasChanges = hasFormChanged();
+            
+            saveButton.disabled = !hasChanges;
+            
+            // Add or remove disabled class instead of inline styles
+            if (hasChanges) {
+                saveButton.classList.remove('button-disabled');
+            } else {
+                saveButton.classList.add('button-disabled');
+            }
+        }
+
+        // Add styles to the document
+        const styles = document.createElement('style');
+        styles.textContent = `
+            .button-disabled {
+                opacity: 0.5 !important;
+                cursor: not-allowed !important;
+                pointer-events: auto !important;
+                user-select: none !important;
+                -webkit-user-select: none !important;
+                -moz-user-select: none !important;
+                -ms-user-select: none !important;
+                transition: none !important;
+                background: var(--original-background, inherit) !important;
+                color: var(--original-color, inherit) !important;
+            }
+
+            .button-disabled:hover,
+            .button-disabled:active,
+            .button-disabled:focus {
+                opacity: 0.5 !important;
+                transition: none !important;
+                animation: none !important;
+                background: var(--original-background, inherit) !important;
+                color: var(--original-color, inherit) !important;
+            }
+        `;
+        document.head.appendChild(styles);
+
+        // Initialize form tracking when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            // Store initial form values
+            initialFormValues = getFormValues();
+            
+            // Store original button styles
+            const saveButton = document.querySelector('.save-button');
+            const computedStyle = window.getComputedStyle(saveButton);
+            const originalBackground = computedStyle.getPropertyValue('background');
+            const originalColor = computedStyle.getPropertyValue('color');
+            saveButton.style.setProperty('--original-background', originalBackground);
+            saveButton.style.setProperty('--original-color', originalColor);
+            
+            // Add change event listeners to all form inputs
+            const form = document.querySelector('form');
+            const inputs = form.querySelectorAll('input, textarea, select');
+            
+            inputs.forEach(input => {
+                input.addEventListener('input', updateSaveButton);
+                input.addEventListener('change', updateSaveButton);
+            });
+            
+            // Initial button state
+            updateSaveButton();
+        });
+    </script>
+    <script>
+        function showPopup(message, onConfirm) {
+          const popup = document.getElementById('custom-popup');
+          const popupMessage = document.getElementById('popup-message');
+          const confirmButton = document.getElementById('popup-confirm');
+          const cancelButton = document.getElementById('popup-cancel');
+        
+          popupMessage.textContent = message;
+          popup.classList.remove('hiddenpopup');
+        
+          const handleConfirm = () => {
+            popup.classList.add('hiddenpopup');
+            confirmButton.removeEventListener('click', handleConfirm);
+            cancelButton.removeEventListener('click', handleCancel);
+            onConfirm();
+          };
+        
+          const handleCancel = () => {
+            popup.classList.add('hiddenpopup');
+            confirmButton.removeEventListener('click', handleConfirm);
+            cancelButton.removeEventListener('click', handleCancel);
+          };
+        
+          confirmButton.addEventListener('click', handleConfirm);
+          cancelButton.addEventListener('click', handleCancel);
+        }
+        
+        // Replace the existing confirmation functions
+        function confirmResetLayout() {
+          showPopup(
+            'Are you sure you want to reset the module layout to default? This will reset all module positions.',
+            () => {
+              fetch('/reset-module-order', { method: 'POST' })
+                .then(response => {
+                  if (response.ok) {
+                    window.location.reload();
+                  }
+                });
+            }
+          );
+        }
+        
+        function confirmResetSettings() {
+          showPopup(
+            'Are you sure you want to reset all profile settings to default? (This will not affect your module layout or your bio, name and links.)',
+            () => {
+              fetch('/reset-profile-settings', { method: 'POST' })
+                .then(response => {
+                  if (response.ok) {
+                    window.location.reload();
+                  }
+                });
+            }
+          );
+        }
+    </script>
+{% endblock %}
+
+{% block content %}
+    <body>
+        <div id="dashboard-container">
+            <div id="dashboard-grid">
+                {% include "components/side_panel.html" %}
+                    <div class="vertical" id="dash-content">
+                        <h1 class="h1-dash-content">Edit Profile</h1>
+                        <form id="themeForm" method="POST" action="{{ url_for('update_profile') }}">
+
+
+                            <h2 class="h2-dash">Details</h2>
+                            <div class="simple-edit-box">
+                                <h3 class="h3-dash">Display Name</h3>
+                                <label for="custom_name">A set of 32 characters to identify your profile.</label>
+                                <input class="small-input" type="text" id="custom_name" name="custom_name" maxlength="32" value="{{ user.custom_name }}" placeholder="Enter your name...">
+                            </div>
+
+                            <div class="simple-edit-box">
+                                <h3 class="h3-dash">Bio</h3>
+                                <label for="bio">A short 255 character description to tell everyone a little bit about you. Use @username to link to other profiles (e.g., @obdev).</label>
+                                <textarea class="small-input" id="bio" name="bio" maxlength="255" placeholder="Enter your bio...">{{ user.bio }}</textarea>     
+                            </div>
+
+                            <div class="simple-edit-box">
+                                <h3 class="h3-dash">Links</h3>
+                                <label for="links">They need to be comma-separated. (e.g: <a href="https://www.bladeaxe.com" title="The Official BladeAxe Website">https://bladeaxe.com<a/>, <a href="https://www.obcave.com" title="Seems familiar...">https://obcave.com</a>)</label>
+                                <textarea class="large-input" id="links" name="links" placeholder="Enter your links...">{{ user.links }}</textarea>
+                            </div>
+
+                            <h2 class="h2-dash">Colours</h2>
+
+                            <h3 class="h3-dash">Profile Colours</h3>
+                            
+                            <div class="edit-box-row">
+                                <div class="simple-edit-box linked">
+                                    <div class="profile-colour-picker">
+                                        <div class="color-picker-container">
+                                            <div class="color-picker" id="background_colour_picker"></div>
+                                            <input type="text" id="background_colour" name="background_colour" value="{{ user.background_colour or '#feefcd' }}" hidden>
+                                        </div>
+                                        <div class="label-colour-box">
+                                            <label for="background_colour">Background Colour</label>
+                                        </div>
+                                    </div>
+                                </div>
+                            
+                                <div class="simple-edit-box linked">
+                                    <div class="profile-colour-picker">
+                                        <div class="color-picker-container">
+                                            <div class="color-picker" id="secondary_colour_picker"></div>
+                                            <input type="text" id="secondary_colour" name="secondary_colour" value="{{ user.secondary_colour or '#fec49a' }}" hidden>
+                                        </div>
+                                        <div class="label-colour-box">
+                                            <label for="secondary_colour">Secondary Colour</label>
+                                        </div>
+                                    </div>
+                                </div>
+                            
+                                <div class="simple-edit-box linked">
+                                    <div class="profile-colour-picker">
+                                        <div class="color-picker-container">
+                                            <div class="color-picker" id="tertiary_colour_picker"></div>
+                                            <input type="text" id="tertiary_colour" name="tertiary_colour" value="{{ user.tertiary_colour or '#fda372' }}" hidden>
+                                        </div>
+                                        <div class="label-colour-box">
+                                            <label for="tertiary_colour">Tertiary Colour</label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <h3 class="h3-dash">Text Colours</h3>
+
+                            <div class="edit-box-row">
+                                <div class="simple-edit-box linked">
+                                    <div class="profile-colour-picker">
+                                        <div class="color-picker-container">
+                                            <div class="color-picker" id="text_colour_picker"></div>
+                                            <input type="text" id="text_colour" name="text_colour" value="{{ user.text_colour or '#000000' }}" hidden>
+                                        </div>
+                                        <div class="label-colour-box">
+                                            <label for="text_colour">Text Colour</label>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="simple-edit-box linked">
+                                    <div class="profile-colour-picker">
+                                        <div class="color-picker-container">
+                                            <div class="color-picker" id="text_highlight_colour_picker"></div>
+                                            <input type="text" id="text_highlight_colour" name="text_highlight_colour" value="{{ user.text_highlight_colour or '#7fd47a' }}" hidden>
+                                        </div>
+                                        <div class="label-colour-box">
+                                            <label for="text_highlight_colour">Text Highlight Colour</label>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="simple-edit-box linked">
+                                    <div class="profile-colour-picker">
+                                        <div class="color-picker-container">
+                                            <div class="color-picker" id="link_colour_picker"></div>
+                                            <input type="text" id="link_colour" name="link_colour" value="{{ user.link_colour or '#be4737' }}" hidden>
+                                        </div>
+                                        <div class="label-colour-box">
+                                            <label for="link_colour">Link Colour</label>
+                                        </div>
+                                    </div>
+                                </div>
+                            
+                                <div class="simple-edit-box linked">
+                                    <div class="profile-colour-picker">
+                                        <div class="color-picker-container">
+                                            <div class="color-picker" id="link_hover_colour_picker"></div>
+                                            <input type="text" id="link_hover_colour" name="link_hover_colour" value="{{ user.link_hover_colour or '#388ae8' }}" hidden>
+                                        </div>
+                                        <div class="label-colour-box">
+                                            <label for="link_hover_colour">Link Hover Colour</label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <h2 class="h2-dash">Font Decoration</h2>
+
+                            <div class="simple-edit-box">
+                                <h3 class="h3-dash">Font</h3>
+                                <label for="font">Use <a href="https://fonts.google.com/">Google Fonts</a> to search for a valid font. Default is Mulish.</label>
+                                <input class="tiny-input" type="text" id="font" name="font" value="{{ user.font }}" placeholder="Input a font..." required>
+                            </div>
+
+                            <div class="simple-edit-box">
+                                <h3 class="h3-dash">Font Size</h3>
+                                <label for="font_size">Any valid number, can be as big or as small as you want.</label>
+                                <input class="micro-input" type="number" id="font_size" name="font_size" value="{{ user.font_size }}" placeholder="24" required>
+                            </div>
+
+                            <h2 class="h2-dash">Layout</h2>
+
+                            <h3 class="h3-dash">Text Alignment</h3>
+                            <label for="text_alignment">Which way do you want your text?</label>
+                            <div class="alignment-options">
+                                <input type="hidden" id="text_alignment" name="text_alignment" value="{{ user.text_alignment }}">
+                                <button type="button" class="alignment-box {% if user.text_alignment == 'left' %}selected{% endif %}" data-alignment="left">
+                                    <span class="alignment-text text-left">Left aligned text</span>
+                                </button>
+                                <button type="button" class="alignment-box {% if user.text_alignment == 'centre' %}selected{% endif %}" data-alignment="centre">
+                                    <span class="alignment-text text-center">Center aligned text</span>
+                                </button>
+                                <button type="button" class="alignment-box {% if user.text_alignment == 'right' %}selected{% endif %}" data-alignment="right">
+                                    <span class="alignment-text text-right">Right aligned text</span>
+                                </button>
+                            </div>
+
+                            <h3 class="h3-dash">Column Amount</h3>
+                            <label for="column_amount">Changes how many "columns" make up your profile.</label>
+                            <div class="column-options">
+                                <input type="hidden" id="column_amount" name="column_amount" value="{{ user.column_amount }}">
+                                <button type="button" class="column-box {% if user.column_amount == '1' %}selected{% endif %}" data-columns="1">
+                                    <div class="column-preview columns-1">
+                                        <div class="column-block"></div>
+                                    </div>
+                                    <span class="column-label">1 Column</span>
+                                </button>
+                                <button type="button" class="column-box {% if user.column_amount == '2' %}selected{% endif %}" data-columns="2">
+                                    <div class="column-preview columns-2">
+                                        <div class="column-block"></div>
+                                        <div class="column-block"></div>
+                                    </div>
+                                    <span class="column-label">2 Columns</span>
+                                </button>
+                                <button type="button" class="column-box {% if user.column_amount == '3' %}selected{% endif %}" data-columns="3">
+                                    <div class="column-preview columns-3">
+                                        <div class="column-block"></div>
+                                        <div class="column-block"></div>
+                                        <div class="column-block"></div>
+                                    </div>
+                                    <span class="column-label">3 Columns</span>
+                                </button>
+                                <button type="button" class="column-box {% if user.column_amount == '4' %}selected{% endif %}" data-columns="4">
+                                    <div class="column-preview columns-4">
+                                        <div class="column-block"></div>
+                                        <div class="column-block"></div>
+                                        <div class="column-block"></div>
+                                        <div class="column-block"></div>
+                                    </div>
+                                    <span class="column-label">4 Columns</span>
+                                </button>
+                            </div>
+
+                            <div class="simple-edit-box">
+                                <h3 class="h3-dash">Link Display</h3>
+                                <label for="is_favicon_enabled">Show favicons next to links</label>
+                                <label class="toggle-label green">
+                                    <input type="checkbox" 
+                                        name="is_favicon_enabled" 
+                                        {% if user.is_favicon_enabled %}checked{% endif %}>
+                                    <span class="slider"></span>
+                                </label>
+                            </div>
+
+                            <div class="the-buttons">
+                                <div class="reset-buttons">
+                                    <button type="button" class="reset-button" onclick="confirmResetLayout()">Reset Module Layout</button>
+                                    <button type="button" class="reset-button" onclick="confirmResetSettings()">Reset Profile Settings</button>
+                                </div>
+                                <button class="save-button" type="submit">Save Changes</button>
+                            </div>
+                        </form>
+                    </div>
+            </div>
+        </div>
+        
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                // Configuration for all pickers
+                const pickrOptions = {
+                    theme: 'nano',
+                    swatches: [
+                        '#F13737', '#BE4737', '#FDA372',
+                        '#FEC49A', '#FEEFCD', '#7FD47A',
+                        '#388AE8'
+                    ],
+                    components: {
+                        preview: true,
+                        opacity: false,
+                        hue: true,
+                        interaction: {
+                            hex: false,
+                            rgba: false,
+                            input: true,
+                            save: true
+                        }
+                    }
+                };
+            
+                // Initialize pickers
+                const pickers = [
+                    { 
+                        element: '#background_colour_picker', 
+                        input: '#background_colour',
+                        default: '#feefcd'
+                    },
+                    { 
+                        element: '#secondary_colour_picker', 
+                        input: '#secondary_colour',
+                        default: '#fec49a'
+                    },
+                    { 
+                        element: '#tertiary_colour_picker', 
+                        input: '#tertiary_colour',
+                        default: '#fda372'
+                    },
+                    { 
+                        element: '#text_colour_picker', 
+                        input: '#text_colour',
+                        default: '#000000'
+                    },
+                    { 
+                        element: '#text_highlight_colour_picker', 
+                        input: '#text_highlight_colour',
+                        default: '#388ae8'
+                    },
+                    { 
+                        element: '#link_colour_picker', 
+                        input: '#link_colour',
+                        default: '#be4737'
+                    },
+                    { 
+                        element: '#link_hover_colour_picker', 
+                        input: '#link_hover_colour',
+                        default: '#7fd47a'
+                    }
+                ];
+            
+                pickers.forEach(pickerConfig => {
+                    const container = document.querySelector(pickerConfig.element);
+                    const colorInput = document.querySelector(pickerConfig.input);
+                    const initialColor = colorInput.value || pickerConfig.default;
+            
+                    // Initialize Pickr
+                    const pickr = Pickr.create({
+                        ...pickrOptions,
+                        el: pickerConfig.element,
+                        default: initialColor
+                    });
+            
+                    // Store original color reference
+                    let originalColor = initialColor;
+                    let hasChanges = false;
+            
+                    pickr.on('show', () => {
+                        originalColor = colorInput.value;
+                        hasChanges = false;
+                    });
+            
+                    pickr.on('change', (color) => {
+                        hasChanges = color && color.toHEXA().toString() !== originalColor;
+                    });
+            
+                    pickr.on('save', (color) => {
+                        if (color) {
+                            const newColor = color.toHEXA().toString();
+                            if (newColor !== colorInput.value) {
+                                colorInput.value = newColor;
+                                colorInput.dispatchEvent(new Event('input', { bubbles: true }));
+                                colorInput.dispatchEvent(new Event('change', { bubbles: true }));
+                            }
+                            originalColor = newColor;
+                            pickr.hide();
+                        }
+                    });
+            
+                    pickr.on('hide', () => {
+                        if (hasChanges) {
+                            pickr.setColor(originalColor);
+                            hasChanges = false;
+                        }
+                    });
+            
+                    pickr.on('cancel', () => {
+                        pickr.setColor(originalColor);
+                        hasChanges = false;
+                    });
+            
+                    // Set initial color
+                    pickr.setColor(initialColor);
+                });
+            });
+        </script>
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                // Text Alignment Functionality
+                const alignmentBoxes = document.querySelectorAll('.alignment-box');
+                const alignmentInput = document.getElementById('text_alignment');
+        
+                alignmentBoxes.forEach(box => {
+                    box.addEventListener('click', function() {
+                        alignmentBoxes.forEach(b => b.classList.remove('selected'));
+                        this.classList.add('selected');
+                        alignmentInput.value = this.dataset.alignment;
+                        alignmentInput.dispatchEvent(new Event('change', { bubbles: true }));
+                    });
+                });
+        
+                // Column Amount Functionality
+                const columnBoxes = document.querySelectorAll('.column-box');
+                const columnInput = document.getElementById('column_amount');
+        
+                columnBoxes.forEach(box => {
+                    box.addEventListener('click', function() {
+                        columnBoxes.forEach(b => b.classList.remove('selected'));
+                        this.classList.add('selected');
+                        columnInput.value = this.dataset.columns;
+                        columnInput.dispatchEvent(new Event('change', { bubbles: true }));
+                    });
+                });
+            });
+        </script>
+        <div id="custom-popup" class="popup-overlay hiddenpopup">
+            <div class="popup-content">
+              <h2 id="popup-title" class="popup-title">Confirm Action</h2>
+              <p id="popup-message" class="popup-message"></p>
+              <div class="popup-buttons">
+                <button id="popup-cancel" class="popup-button cancel-button">Cancel</button>
+                <button id="popup-confirm" class="popup-button confirm-button">Confirm</button>
+              </div>
+            </div>
+        </div>
+    </body>
+{% endblock %}

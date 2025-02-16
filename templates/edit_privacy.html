@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+{% block title %}Privacy Settings{% endblock %}
+{% block head %}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script defer>
+        // Store initial form values when page loads
+        let initialFormValues = {};
+
+        // Function to get all form values
+        function getFormValues() {
+            const form = document.querySelector('form');
+            const values = {};
+            
+            // Handle checkboxes specifically
+            form.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+                values[checkbox.name] = checkbox.checked;
+            });
+            
+            // Handle all other form elements
+            const formData = new FormData(form);
+            for (const [key, value] of formData.entries()) {
+                if (!values.hasOwnProperty(key)) { // Don't override checkbox values
+                    values[key] = value;
+                }
+            }
+            
+            return values;
+        }
+
+        // Function to compare current values with initial values
+        function hasFormChanged() {
+            const currentValues = getFormValues();
+            
+            for (const key in currentValues) {
+                // Skip comparison if the initial value doesn't exist
+                if (!initialFormValues.hasOwnProperty(key)) continue;
+                
+                // Compare current value with initial value
+                if (currentValues[key] !== initialFormValues[key]) {
+                    return true;
+                }
+            }
+            
+            return false;
+        }
+
+        // Function to update save button state
+        function updateSaveButton() {
+            const saveButton = document.querySelector('.save-button');
+            const hasChanges = hasFormChanged();
+            
+            saveButton.disabled = !hasChanges;
+            
+            // Add or remove disabled class instead of inline styles
+            if (hasChanges) {
+                saveButton.classList.remove('button-disabled');
+            } else {
+                saveButton.classList.add('button-disabled');
+            }
+        }
+
+        // Add styles to the document
+        const styles = document.createElement('style');
+        styles.textContent = `
+            .button-disabled {
+                opacity: 0.5 !important;
+                cursor: not-allowed !important;
+                pointer-events: auto !important;
+                user-select: none !important;
+                -webkit-user-select: none !important;
+                -moz-user-select: none !important;
+                -ms-user-select: none !important;
+                transition: none !important;
+                background: var(--original-background, inherit) !important;
+                color: var(--original-color, inherit) !important;
+            }
+
+            .button-disabled:hover,
+            .button-disabled:active,
+            .button-disabled:focus {
+                opacity: 0.5 !important;
+                transition: none !important;
+                animation: none !important;
+                background: var(--original-background, inherit) !important;
+                color: var(--original-color, inherit) !important;
+            }
+        `;
+        document.head.appendChild(styles);
+
+        // Initialize form tracking when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            // Store initial form values
+            initialFormValues = getFormValues();
+            
+            // Store original button styles
+            const saveButton = document.querySelector('.save-button');
+            const computedStyle = window.getComputedStyle(saveButton);
+            const originalBackground = computedStyle.getPropertyValue('background');
+            const originalColor = computedStyle.getPropertyValue('color');
+            saveButton.style.setProperty('--original-background', originalBackground);
+            saveButton.style.setProperty('--original-color', originalColor);
+            
+            // Add change event listeners to all form inputs
+            const form = document.querySelector('form');
+            const inputs = form.querySelectorAll('input, textarea, select');
+            
+            inputs.forEach(input => {
+                input.addEventListener('input', updateSaveButton);
+                input.addEventListener('change', updateSaveButton);
+            });
+            
+            // Initial button state
+            updateSaveButton();
+        });
+    </script>
+{% endblock %}
+
+{% block content %}
+    <body>
+        <div id="dashboard-container">
+            <div id="dashboard-grid">
+                {% include "components/side_panel.html" %}
+                <div class="vertical" id="dash-content">
+                    <h1 class="h1-dash-content">Privacy Settings</h1>
+                    <form method="POST" action="{{ url_for('update_privacy') }}">
+
+                        <div class="toggle-container">
+                            <h3 class="h3-dash">Private Account</h3>
+                            <label for="font_size">Enabling this will prevent anyone from seeing your profile.</label>
+                            <label for="is_private" class="toggle-label red">
+                                <input type="checkbox"
+                                       id="is_private" 
+                                       name="is_private" 
+                                       {% if user.is_private %}checked{% endif %}>
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+
+                        <button class="save-button" type="submit">Save Changes</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </body>
+{% endblock %}

@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+{% block title %}Your Badges{% endblock %}
+{% block head %}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        .badge-dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .badge-card {
+            border-radius: 15px;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            position: relative;
+            transform-style: preserve-3d;
+            transform: perspective(1000px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+            transition: transform 0.1s ease, box-shadow 0.2s ease;
+            overflow: hidden;
+            color: white;
+        }
+
+        /* Order Priority Background Colors */
+        .badge-card.rank-1 {
+            color: black;
+            background: linear-gradient(135deg, #FFD700, #B8860B); /* Gold */
+        }
+
+        .badge-card.rank-2 {
+            color: black;
+            background: linear-gradient(135deg, #C0C0C0, #808080); /* Silver */
+        }
+
+        .badge-card.rank-3 {
+            background: linear-gradient(135deg, #CD7F32, #8B4513); /* Bronze */
+        }
+
+        .badge-card.rank-4 {
+            background: linear-gradient(135deg, #4B0082, #2E0854); /* Deep Purple */
+        }
+
+        .badge-card.rank-5 {
+            background: linear-gradient(135deg, #000080, #000045); /* Navy Blue */
+        }
+
+        /* Default for ranks > 5 */
+        .badge-card.rank-default {
+            background: linear-gradient(135deg, #2F4F4F, #1C2F2F); /* Dark Slate */
+        }
+
+        /* Base hover effect */
+        .badge-card::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 15px;
+            background: transparent;
+            transition: all 0.2s ease;
+        }
+
+        .badge-card:hover {
+            box-shadow: 0 20px 30px rgba(0,0,0,0.4);
+        }
+
+        /* Dynamic badge effect - adjusted to work with new backgrounds */
+        .badge-card.dynamic::before {
+            background: linear-gradient(
+                125deg,
+                rgba(255,255,255,0) 0%,
+                rgba(255,255,255,0.2) 10%,
+                rgba(255,255,255,0.4) 20%,
+                rgba(255,255,255,0.2) 30%,
+                rgba(255,255,255,0) 40%
+            );
+            animation: prism-shine 3s infinite linear;
+        }
+
+        .badge-icon {
+            margin-top: 5px;
+            width: 50px;
+            height: 50px;
+            border-radius: 5px;
+            object-fit: contain;
+            transition: transform 0.2s;
+            transform: translateZ(20px);
+            filter: drop-shadow(0 0 5px rgba(0,0,0,0.2));
+        }
+
+        .badge-card h3,
+        .badge-card p,
+        .badge-card .badge-properties {
+            transform: translateZ(15px);
+        }
+
+        /* Top rank floating animation */
+        .badge-card.rank-1,
+        .badge-card.rank-2,
+        .badge-card.rank-3 {
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes prism-shine {
+            0% { background-position: -100% 0; }
+            100% { background-position: 200% 0; }
+        }
+
+        
+
+        /* Badge properties styling */
+        .badge-properties {
+            margin-top: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+
+        /* Add emphasis to the rank display for top ranks */
+        .badge-card.rank-1 .badge-properties span:nth-child(2),
+        .badge-card.rank-2 .badge-properties span:nth-child(2),
+        .badge-card.rank-3 .badge-properties span:nth-child(2) {
+            font-weight: bold;
+            text-shadow: 0 0 5px rgba(255,255,255,0.3);
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+<div id="dashboard-container">
+    <div id="dashboard-grid">
+        {% include "components/side_panel.html" %}
+        <div class="vertical" id="dash-content">
+            <h1 class="h1-dash-content">Your Badges</h1>
+            {% if badges %}
+                <div class="badge-dashboard">
+                    {% for badge in badges %}
+                        <div class="badge-card 
+                            {% if badge.is_dynamic %}dynamic{% endif %}
+                            {% if badge.order_rank == 1 %}rank-1
+                            {% elif badge.order_rank == 2 %}rank-2
+                            {% elif badge.order_rank == 3 %}rank-3
+                            {% elif badge.order_rank == 4 %}rank-4
+                            {% elif badge.order_rank == 5 %}rank-5
+                            {% else %}rank-default{% endif %}"
+                            data-tilt>
+                            <img src="{{ url_for('static', filename=badge.icon_path) }}" class="badge-icon">
+                            <h3 class="h3-sidebar">{{ badge.name }}</h3>
+                            <p>{{ badge.description }}</p>
+                            <div class="badge-properties">
+                                <span>Permission: {{ badge.permission_level|title }}</span>
+                                <span>Order Priority: {{ badge.order_rank }}</span>
+                                <span>Type: {{ 'Dynamic' if badge.is_dynamic else 'Static' }}</span>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p class="no-badges">No badges earned yet</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const cards = document.querySelectorAll('.badge-card');
+    
+    cards.forEach(card => {
+        card.addEventListener('mousemove', handleTilt);
+        card.addEventListener('mouseleave', resetTilt);
+    });
+
+    function handleTilt(e) {
+        const card = e.currentTarget;
+        const cardRect = card.getBoundingClientRect();
+        const centerX = cardRect.left + cardRect.width / 2;
+        const centerY = cardRect.top + cardRect.height / 2;
+        const mouseX = e.clientX;
+        const mouseY = e.clientY;
+        
+        const maxTilt = 15;
+        const tiltX = ((mouseY - centerY) / (cardRect.height / 2)) * -maxTilt;
+        const tiltY = ((mouseX - centerX) / (cardRect.width / 2)) * maxTilt;
+        
+        card.style.transform = `perspective(1000px) rotateX(${tiltX}deg) rotateY(${tiltY}deg)`;
+    }
+
+    function resetTilt(e) {
+        const card = e.currentTarget;
+        card.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg)';
+    }
+});
+</script>
+{% endblock %}

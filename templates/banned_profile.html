@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}@{{ username }}{% endblock %}
+{% block head %}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="private-profile">
+    <h2>⚠️ This account has been suspended!</h2>
+    <div class="ban-details">
+        <p><strong>Reason:</strong> {{ ban_reason or 'No reason provided' }}</p>
+        <p><strong>Username:</strong> @{{ username }}</p>
+        {% if is_owner %}
+        <div class="owner-notice">
+            <p>YOU HAVE BEEN BANNED FROM OBCAVE</p>
+            <p>Contact an admin if you believe this was a mistake :)</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

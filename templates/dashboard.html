@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block head %}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+{% endblock %}
+
+{% block content %}
+    <body>
+        <div id="dashboard-container">
+            <div id="dashboard-grid">
+                {% include "components/side_panel.html" %}
+                <div class="dash-column">
+                    <div class="profile-dash-bar">
+                        <div class="vertical" id="dash-content">
+                            <div class="profile-dash-bar-row">
+                                <div class="profile-dash-bar-avatar">
+                                    <img src="{{ user.avatar_url }}" alt="Avatar">
+                                </div>
+                                <div class="profile-dash-bar-info">
+                                    <h1 class="h1-dash-content-profile">Welcome, {{ user.custom_name or user.username }}!</h1>
+                                    <a href="{{ url_for('public_profile', username=session.username) }}">Visit your {{ "private" if user.is_private else "public" }} profile ></a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="vertical" id="dash-content">
+                        <div class="profile-details">
+                            <p>{{ user.bio }}</p>
+                            <p>Background Colour: <span style="color: {{ user.background_colour }};">{{ user.background_colour }}</span></p>
+                            <p>Links: <br>
+                                {% if user.links %}
+                                    {% for link in user.links.split(',') %}
+                                        <a href="{{ link.strip() }}" target="_blank">{{ link.strip() }}</a><br>
+                                    {% endfor %}
+                                {% else %}
+                                    No links provided.
+                                {% endif %}
+                            </p>
+                            <p>Font: {{ user.font }}</p>
+                            <p>Font Size: {{ user.font_size }}</p>
+                            <p>Text Colour: <span style="color: {{ user.text_colour }};">{{ user.text_colour }}</span></p>
+                            <p>Text Highlight Colour: <span style="background-color: {{ user.text_highlight_colour }};">{{ user.text_highlight_colour }}</span></p>
+                            <p>Text Alignment: {{ user.text_alignment }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </body>
+{% endblock %}

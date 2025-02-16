@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block title %}Admin - Manage Users{% endblock %}
+{% block content %}
+<div id="dashboard-container">
+    <div id="dashboard-grid">
+        {% include "components/side_panel.html" %}
+        <div class="vertical" id="dash-content">
+            <h1 class="h1-dash-content">Manage Users</h1>
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+            <div class="user-list">
+                {% for user in users %}
+                <div class="user-card {% if user.is_banned %}banned{% endif %}">
+                    <img src="{{ user.avatar_url }}" class="avatar" alt="{{ user.username }}'s Avatar">
+                    <div class="user-info">
+                        <h3 class="username">@{{ user.username }} <span class="custom-name">({{ user.custom_name or user.username }})</span></h3>
+                        <div class="status">
+                            {% if user.is_banned %}
+                                <span class="badge banned-badge">BANNED</span>
+                                <div class="ban-reason">
+                                    <strong>Reason:</strong> {{ user.ban_reason or 'No reason provided' }}
+                                </div>
+                            {% else %}
+                                <span class="badge active-badge">ACTIVE</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="user-actions">
+                        <a href="/@{{ user.username }}" class="btn btn-view">View Profile</a>
+                        {% if user.discord_id != current_user.discord_id %}
+                        <button class="btn {% if user.is_banned %}btn-success{% else %}btn-danger{% endif %}" 
+                                data-userid="{{ user.discord_id }}"
+                                data-action="{% if user.is_banned %}unban{% else %}ban{% endif %}"
+                                onclick="showBanModal(this)">
+                            {% if user.is_banned %}Unban{% else %}Ban{% endif %}
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Ban Modal -->
+<div id="banModal" class="popup-overlay hiddenpopup">
+    <div class="popup-content">
+        <h2 id="modalTitle">Ban User</h2>
+        <form id="banForm" method="POST" action="/admin/toggle_ban">
+            <input type="hidden" name="user_id" id="modalUserId">
+            <input type="hidden" name="action" id="modalAction">
+            <div class="form-group" id="banReasonGroup">
+                <label for="banReason">Reason:</label>
+                <textarea name="ban_reason" id="banReason"></textarea>
+            </div>
+            <div class="popup-buttons">
+                <button type="submit" class="btn btn-danger confirm-button">Confirm</button>
+                <button type="button" class="btn btn-secondary cancel-button" onclick="closeModal()">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function showBanModal(button) {
+        const modal = document.getElementById('banModal');
+        const userId = button.dataset.userid;
+        const action = button.dataset.action;
+        
+        document.getElementById('modalUserId').value = userId;
+        document.getElementById('modalAction').value = action;
+        document.getElementById('modalTitle').textContent = action === 'ban' ? 'Ban User' : 'Unban User';
+        
+        const reasonGroup = document.getElementById('banReasonGroup');
+        if (action === 'unban') {
+            reasonGroup.style.display = 'none';
+            document.getElementById('banReason').removeAttribute('required');
+        } else {
+            reasonGroup.style.display = 'block';
+            document.getElementById('banReason').setAttribute('required', 'true');
+        }
+        
+        modal.style.display = 'flex';
+    }
+    
+    function closeModal() {
+        document.getElementById('banModal').style.display = 'none';
+    }
+</script>
+{% endblock %}

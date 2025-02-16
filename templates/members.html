@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block title %}Members{% endblock %}
+{% block head %}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <style>
+        .members-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 1rem;
+            padding: 2rem;
+        }
+        .member-card {
+            padding: 1rem;
+            border-radius: 16px;
+            transition: transform 0.2s;
+        }
+        .member-card:hover {
+            transform: translateY(-5px);
+        }
+        .member-avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            margin-bottom: 1rem;
+        }
+        .member-username {
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+            text-decoration: none;
+        }
+        h1.titleh1 {
+            padding-left: 2.5rem;
+        }
+        @media screen and (max-width: 768px) {
+            h1.titleh1 {
+                padding-left: 0;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+            }
+        }
+        a {
+            text-decoration: none;
+        }
+        .member-item-container{
+            display: flex;
+            flex-direction: row;
+        }
+        .badges-box {
+            margin-left: 15px;
+        }
+        img.badge-image {
+            background-color: rgba(0, 0, 0, 0.5);
+            border-radius: 5px;
+            width: 25px;
+            height: 25px;
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+<h1 class="titleh1">registered obbers</h1>
+<div class="members-grid">
+    {% for user in users %}
+    <a href="{{ url_for('public_profile', username=user.username) }}" 
+       class="member-card"
+       style="background-color: {{ user.secondary_colour }};
+              color: {{ user.text_colour }};
+              border: 5px solid {{ user.tertiary_colour }};">
+        <div class="member-item-container">
+            <img src="{{ user.avatar_url }}" 
+                class="member-avatar"
+                alt="{{ user.username }}'s avatar">
+            <div class="badges-box">
+                {% for badge in user.badges %}
+                <img src="{{ url_for('static', filename=badge) }}" 
+                    class="badge-image" 
+                    alt="Badge icon"
+                    title="User badge">
+                {% endfor %}
+            </div>
+        </div>
+        <div class="member-username" 
+             style="color: {{ user.link_colour }};">
+            @{{ user.username }}
+        </div>
+    </a>
+    {% endfor %}
+</div>
+{% endblock %}
